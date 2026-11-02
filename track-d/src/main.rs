@@ -32,7 +32,7 @@ impl FastInput {
     }
 }
 
-struct Csr { offsets: Vec<usize>, heads: Vec<u32>, weights: Vec<u32> }
+struct Csr { offsets: Vec<usize>, heads: Vec<u32>, weights: Vec<u32>, has_in_edge: Vec<u8> }
 
 impl Csr {
     fn read(path: &str) -> io::Result<(usize, Self)> {
@@ -41,11 +41,13 @@ impl Csr {
         let m = input.next_u32() as usize;
         let mut edges = Vec::with_capacity(m);
         let mut degree = vec![0usize; n];
+        let mut has_in_edge = vec![0u8; n];
         for _ in 0..m {
             let u = input.next_u32();
             let v = input.next_u32();
             let w = input.next_u32();
             degree[u as usize] += 1;
+            has_in_edge[v as usize] = 1;
             edges.push((u, v, w));
         }
 
@@ -62,7 +64,7 @@ impl Csr {
             weights[slot] = w;
             cursor[u as usize] += 1;
         }
-        Ok((n, Self { offsets, heads, weights }))
+        Ok((n, Self { offsets, heads, weights, has_in_edge }))
     }
 }
 
@@ -75,6 +77,11 @@ impl Scratch {
 
     fn shortest_path(&mut self, graph: &Csr, source: u32, target: u32) -> Option<u64> {
         if source == target { return Some(0); }
+        // These structural checks avoid a full search for impossible paths.
+        // A non-source target with no incoming edge is unreachable by definition.
+        if graph.has_in_edge[target as usize] == 0 { return None; }
+        let source_index = source as usize;
+        if graph.offsets[source_index] == graph.offsets[source_index + 1] { return None; }
         self.epoch = self.epoch.wrapping_add(1);
         if self.epoch == 0 {
             // Clear generations only on the practically unreachable 32-bit wrap.
