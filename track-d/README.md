@@ -25,7 +25,7 @@ A hand-written byte scanner parses the ASCII files without creating a string for
 
 ### Shortest paths
 
-Each query runs binary-heap Dijkstra from its source and exits when the target is popped with its settled distance. Distances are `u64`, so sums above `2^32 - 1` remain exact. A generation-stamped distance array marks values touched by the current query and avoids clearing all nodes before each search. Stale heap entries are skipped.
+Each query runs Dijkstra with a monotone radix heap and exits when the target is popped with its settled distance. Because edge costs are nonnegative integers, inserted distance keys never fall below the last popped key. Distances are `u64`, so sums above `2^32 - 1` remain exact. A generation-stamped distance array marks values touched by the current query and avoids clearing all nodes before each search. Stale heap entries are skipped.
 
 Before searching, the solver checks two graph invariants: a source with no outgoing edges cannot reach a different target, and a target with no incoming edges cannot be reached from a different source. Both return the correct answer without starting Dijkstra.
 
@@ -51,7 +51,7 @@ a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0
 
 ## Performance plan
 
-Parsing, CSR construction, graph-invariant early rejection, early-exit Dijkstra, stamped scratch space, and parallel queries are the current design. `PERF.md` is the source of truth for measured performance; add timings and run IDs only after the board returns them. First place depends on verified full-data runs and competing submissions, so the next step is to benchmark, inspect the slowest queries, and keep only optimizations that improve repeated runs without changing the output hash.
+Parsing, CSR construction, graph-invariant early rejection, radix-heap Dijkstra, stamped scratch space, and parallel queries are the current design. `PERF.md` is the source of truth for measured performance; add timings and run IDs only after the board returns them. First place depends on verified full-data runs and competing submissions, so the next step is to benchmark, inspect the slowest queries, and keep only optimizations that improve repeated runs without changing the output hash.
 
 ## With another 24 hours
 

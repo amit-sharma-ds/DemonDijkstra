@@ -1,5 +1,3 @@
-use std::cmp::Reverse;
-use std::collections::BinaryHeap;
 use std::fs;
 use std::io::{self, BufWriter, Write};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -33,6 +31,52 @@ impl FastInput {
 }
 
 struct Csr { offsets: Vec<usize>, heads: Vec<u32>, weights: Vec<u32>, has_in_edge: Vec<u8> }
+
+// Dijkstra inserts keys no smaller than the last key popped. The radix heap
+// exploits that monotonicity while retaining exact ordering for u64 distances.
+struct RadixHeap {
+    last: u64,
+    len: usize,
+    buckets: [Vec<(u64, u32)>; 65],
+}
+
+impl RadixHeap {
+    fn new() -> Self {
+        Self { last: 0, len: 0, buckets: std::array::from_fn(|_| Vec::new()) }
+    }
+
+    fn clear(&mut self) {
+        self.last = 0;
+        self.len = 0;
+        for bucket in &mut self.buckets { bucket.clear(); }
+    }
+
+    fn bucket_index(&self, key: u64) -> usize {
+        (64 - (key ^ self.last).leading_zeros()) as usize
+    }
+
+    fn push(&mut self, key: u64, node: u32) {
+        debug_assert!(key >= self.last);
+        let bucket = self.bucket_index(key);
+        self.buckets[bucket].push((key, node));
+        self.len += 1;
+    }
+
+    fn pop_min(&mut self) -> Option<(u64, u32)> {
+        if self.len == 0 { return None; }
+        if self.buckets[0].is_empty() {
+            let index = (1..65).find(|&i| !self.buckets[i].is_empty())?;
+            self.last = self.buckets[index].iter().map(|entry| entry.0).min().unwrap();
+            // Rebucket around the new minimum without reallocating the bucket.
+            while let Some(entry) = self.buckets[index].pop() {
+                let bucket = self.bucket_index(entry.0);
+                self.buckets[bucket].push(entry);
+            }
+        }
+        self.len -= 1;
+        self.buckets[0].pop()
+    }
+}
 
 impl Csr {
     fn read(path: &str) -> io::Result<(usize, Self)> {
@@ -68,11 +112,11 @@ impl Csr {
     }
 }
 
-struct Scratch { dist: Vec<u64>, stamp: Vec<u32>, epoch: u32, heap: BinaryHeap<Reverse<(u64, u32)>> }
+struct Scratch { dist: Vec<u64>, stamp: Vec<u32>, epoch: u32, heap: RadixHeap }
 
 impl Scratch {
     fn new(n: usize) -> Self {
-        Self { dist: vec![0; n], stamp: vec![0; n], epoch: 0, heap: BinaryHeap::new() }
+        Self { dist: vec![0; n], stamp: vec![0; n], epoch: 0, heap: RadixHeap::new() }
     }
 
     fn shortest_path(&mut self, graph: &Csr, source: u32, target: u32) -> Option<u64> {
@@ -92,8 +136,8 @@ impl Scratch {
         self.heap.clear();
         self.dist[source as usize] = 0;
         self.stamp[source as usize] = epoch;
-        self.heap.push(Reverse((0, source)));
-        while let Some(Reverse((distance, u))) = self.heap.pop() {
+        self.heap.push(0, source);
+        while let Some((distance, u)) = self.heap.pop_min() {
             let ui = u as usize;
             if self.stamp[ui] != epoch || self.dist[ui] != distance { continue; }
             if u == target { return Some(distance); }
@@ -104,7 +148,7 @@ impl Scratch {
                 if self.stamp[vi] != epoch || candidate < self.dist[vi] {
                     self.stamp[vi] = epoch;
                     self.dist[vi] = candidate;
-                    self.heap.push(Reverse((candidate, v)));
+                    self.heap.push(candidate, v);
                 }
             }
         }
