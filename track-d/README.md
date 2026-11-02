@@ -21,7 +21,7 @@ track-d/
 
 ### Input and graph layout
 
-A hand-written byte scanner parses the ASCII files without creating a string for each line. The graph is stored as compressed sparse row (CSR): outgoing-edge counts are prefix-summed into offsets, then heads and `u32` weights are scattered into contiguous arrays. Parallel edges and exact duplicates are kept; non-improving relaxations are ignored by Dijkstra.
+A hand-written byte scanner parses the ASCII files without creating a string for each line. The graph is stored as compressed sparse row (CSR): 32-bit outgoing-edge counts are prefix-summed into 32-bit offsets, then heads and `u32` weights are scattered into contiguous arrays. The parser's large input buffer is released before final graph arrays are allocated. Parallel edges and exact duplicates are kept; non-improving relaxations are ignored by Dijkstra.
 
 ### Shortest paths
 

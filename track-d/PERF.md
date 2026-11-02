@@ -10,5 +10,6 @@ Every step from the reference to your final version, each with the live-board ru
 | 3 | Up to 12 query workers; ordered output | Pending board run | — | — | — |
 | 4 | Reject paths to zero-in-degree targets before Dijkstra | Pending board run | — | — | — |
 | 5 | Replace binary heap with monotone integer radix heap | Pending board run | — | — | — |
+| 6 | Compact CSR counters and release parser buffer before graph allocation | Pending board run | — | — | — |
 
 The live board run IDs and measurements must come from actual board submissions. No board submission tool is available in this workspace, so no run IDs or timings are claimed here.
