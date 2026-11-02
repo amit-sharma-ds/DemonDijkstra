@@ -26,6 +26,8 @@ The contest branch keeps the same project under `track-d/`, as required by the S
 3. **Search per query:** binary-heap Dijkstra uses `u64` distances, skips stale heap entries, and stops as soon as the target is removed from the heap. A generation stamp marks which distance entries belong to the current search, avoiding an `O(n)` reset per query.
 4. **Use available cores:** up to 12 standard-library workers claim queries dynamically. Each worker owns its distance/stamp arrays and heap; answers are placed by query index and written in the original order.
 
+Before searching, two general graph checks return immediately when the source has no outgoing edges or the distinct target has no incoming edges. Both cases make a path impossible.
+
 The approach handles zero-weight edges, self-loops, directed one-way roads, disconnected nodes, unreachable targets, repeated queries, and path totals above `2^32 - 1`. It does not use a shortest-path crate or precompute answers from a dataset.
 
 ## Build
@@ -50,7 +52,7 @@ a4c76ed030bc7e365db33191f6cf74708fba7f25eb48d64c8c4279f2e57046a0
 
 ## Performance work
 
-The core optimizations are whole-file byte parsing, compact CSR storage, early-exit Dijkstra, generation-stamped scratch arrays, and parallel query execution. `PERF.md` records measured changes; timings and rank should only be added after an actual board run. A README cannot guarantee first place—the score depends on correctness, the measured full-data runtime, memory use, and other teams' submissions.
+The core optimizations are whole-file byte parsing, compact CSR storage, graph-invariant early rejection, early-exit Dijkstra, generation-stamped scratch arrays, and parallel query execution. `PERF.md` records measured changes; timings and rank should only be added after an actual board run. A README cannot guarantee first place—the score depends on correctness, the measured full-data runtime, memory use, and other teams' submissions.
 
 For the contest, submit the repository and Track D entry, install the board app, and push the `speed-demon` branch. Each push can trigger a board run; record its real run ID and metrics in `track-d/PERF.md`.
 

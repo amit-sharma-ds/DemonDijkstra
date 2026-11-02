@@ -8,5 +8,6 @@ Every step from the reference to your final version, each with the live-board ru
 | 1 | Hand-written byte parser and CSR construction | Pending board run | — | — | — |
 | 2 | Version-stamped Dijkstra with early target exit | Pending board run | — | — | — |
 | 3 | Up to 12 query workers; ordered output | Pending board run | — | — | — |
+| 4 | Reject paths to zero-in-degree targets before Dijkstra | Pending board run | — | — | — |
 
 The live board run IDs and measurements must come from actual board submissions. No board submission tool is available in this workspace, so no run IDs or timings are claimed here.
