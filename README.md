@@ -22,7 +22,7 @@ The contest branch keeps the same project under `track-d/`, as required by the S
 ## How it works
 
 1. **Parse once:** a small byte scanner reads the ASCII inputs without allocating a string for every line.
-2. **Build CSR:** count each node's outgoing edges, prefix-sum the counts, then scatter edge heads and `u32` weights into contiguous arrays. Parallel and exact duplicate edges remain valid CSR entries; Dijkstra ignores any relaxation that does not improve a distance.
+2. **Build CSR:** count each node's outgoing edges with 32-bit counters, prefix-sum into 32-bit offsets, then scatter edge heads and `u32` weights into contiguous arrays. The large input buffer is released before final graph allocation. Parallel and exact duplicate edges remain valid CSR entries; Dijkstra ignores any relaxation that does not improve a distance.
 3. **Search per query:** radix-heap Dijkstra uses `u64` distances, skips stale heap entries, and stops as soon as the target is removed from the heap. Nonnegative integer edge weights make inserted keys monotone. A generation stamp marks which distance entries belong to the current search, avoiding an `O(n)` reset per query.
 4. **Use available cores:** up to 12 standard-library workers claim queries dynamically. Each worker owns its distance/stamp arrays and heap; answers are placed by query index and written in the original order.
 

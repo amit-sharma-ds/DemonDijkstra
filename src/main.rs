@@ -30,7 +30,7 @@ impl FastInput {
     }
 }
 
-struct Csr { offsets: Vec<usize>, heads: Vec<u32>, weights: Vec<u32>, has_in_edge: Vec<u8> }
+struct Csr { offsets: Vec<u32>, heads: Vec<u32>, weights: Vec<u32>, has_in_edge: Vec<u8> }
 
 // Dijkstra inserts keys no smaller than the last key popped. The radix heap
 // exploits that monotonicity while retaining exact ordering for u64 distances.
@@ -84,7 +84,9 @@ impl Csr {
         let n = input.next_u32() as usize;
         let m = input.next_u32() as usize;
         let mut edges = Vec::with_capacity(m);
-        let mut degree = vec![0usize; n];
+        // The Track D edge count is far below u32::MAX; 32-bit counters halve
+        // the per-node storage compared with usize on the scoring machine.
+        let mut degree = vec![0u32; n];
         let mut has_in_edge = vec![0u8; n];
         for _ in 0..m {
             let u = input.next_u32();
@@ -95,15 +97,19 @@ impl Csr {
             edges.push((u, v, w));
         }
 
+        // The input bytes are no longer needed. Release the 92 MB text buffer
+        // before allocating the final CSR arrays to keep the peak RSS low.
+        drop(input);
+
         // Prefix sums make each node's outgoing edges a contiguous CSR range.
         // Keeping parallel/duplicate edges is correct; relaxations discard losers.
-        let mut offsets = vec![0usize; n + 1];
+        let mut offsets = vec![0u32; n + 1];
         for u in 0..n { offsets[u + 1] = offsets[u] + degree[u]; }
         let mut cursor = offsets[..n].to_vec();
         let mut heads = vec![0u32; m];
         let mut weights = vec![0u32; m];
         for (u, v, w) in edges {
-            let slot = cursor[u as usize];
+            let slot = cursor[u as usize] as usize;
             heads[slot] = v;
             weights[slot] = w;
             cursor[u as usize] += 1;
@@ -141,7 +147,7 @@ impl Scratch {
             let ui = u as usize;
             if self.stamp[ui] != epoch || self.dist[ui] != distance { continue; }
             if u == target { return Some(distance); }
-            for edge in graph.offsets[ui]..graph.offsets[ui + 1] {
+            for edge in graph.offsets[ui] as usize..graph.offsets[ui + 1] as usize {
                 let v = graph.heads[edge];
                 let candidate = distance + u64::from(graph.weights[edge]);
                 let vi = v as usize;
